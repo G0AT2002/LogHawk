@@ -1,0 +1,73 @@
+import re
+import sys
+import json
+
+# Load configuration file
+def load_config(config_path="config.json"):
+    try:
+        with open(config_path, "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"Error: Configuration file '{config_path}' not found.")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON format in configuration file.")
+        sys.exit(1)
+
+# Scan log file for suspicious patterns
+def scan_logs(log_file, config):
+    try:
+        with open(log_file, "r") as file:
+            logs = file.readlines()
+    except FileNotFoundError:
+        print(f"Error: Log file '{log_file}' not found.")
+        sys.exit(1)
+
+    alerts = []
+
+    for category, pattern in config.items():
+        try:
+            regex = re.compile(pattern)
+        except re.error:
+            print(f"Error: Invalid regex pattern for category '{category}'")
+            continue
+
+        for line_number, line in enumerate(logs, 1):
+            if regex.search(line):
+                alerts.append(f"[{category.upper()}] Line {line_number}: {line.strip()}")
+
+    if alerts:
+        print("\n[ALERT] Suspicious Activity Detected!\n")
+        print("\n".join(alerts))
+    else:
+        print("No suspicious activity detected.")
+
+# Main function
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 loghawk.py /path/to/logfile.log [--config /path/to/config.json]")
+        sys.exit(1)
+
+    log_file = sys.argv[1]
+    config_file = "config.json"
+
+    if len(sys.argv) > 2:
+        if sys.argv[1] == "--config":
+            if len(sys.argv) < 3:
+                print("Error: Missing config file path after --config.")
+                sys.exit(1)
+            config_file = sys.argv[2]
+            log_file = sys.argv[3]
+        else:
+            # Check if --config is provided as the second argument
+            if sys.argv[2] == "--config":
+                if len(sys.argv) < 4:
+                    print("Error: Missing config file path after --config.")
+                    sys.exit(1)
+                config_file = sys.argv[3]
+
+    config = load_config(config_file)
+    scan_logs(log_file, config)
+
+if __name__ == "__main__":
+    main()
