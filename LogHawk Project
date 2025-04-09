@@ -1,73 +1,37 @@
+#!/usr/bin/env python3
 import re
 import sys
 import json
 
-# Load configuration file
-def load_config(config_path="config.json"):
+def load_config(config_file="config.json"):
+    """Load the config file or use defaults"""
     try:
-        with open(config_path, "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        print(f"Error: Configuration file '{config_path}' not found.")
-        sys.exit(1)
-    except json.JSONDecodeError:
-        print("Error: Invalid JSON format in configuration file.")
-        sys.exit(1)
+        with open(config_file) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print(f"Error: Could not load {config_file}. Using default rules.")
+        return {  # Default rules if config fails
+            "failed_login": "401 Unauthorized|Failed password",
+            "error": "ERROR|CRITICAL",
+            "suspicious": "cron|bash.*-c"
+        }
 
-# Scan log file for suspicious patterns
 def scan_logs(log_file, config):
+    """Scan logs and print matches"""
     try:
-        with open(log_file, "r") as file:
-            logs = file.readlines()
+        with open(log_file) as f:
+            for line_num, line in enumerate(f, 1):
+                for category, pattern in config.items():
+                    if re.search(pattern, line.strip()):
+                        print(f"[{category.upper()}] Line {line_num}: {line.strip()}")
     except FileNotFoundError:
-        print(f"Error: Log file '{log_file}' not found.")
+        print(f"Error: Log file {log_file} not found!")
         sys.exit(1)
-
-    alerts = []
-
-    for category, pattern in config.items():
-        try:
-            regex = re.compile(pattern)
-        except re.error:
-            print(f"Error: Invalid regex pattern for category '{category}'")
-            continue
-
-        for line_number, line in enumerate(logs, 1):
-            if regex.search(line):
-                alerts.append(f"[{category.upper()}] Line {line_number}: {line.strip()}")
-
-    if alerts:
-        print("\n[ALERT] Suspicious Activity Detected!\n")
-        print("\n".join(alerts))
-    else:
-        print("No suspicious activity detected.")
-
-# Main function
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python3 loghawk.py /path/to/logfile.log [--config /path/to/config.json]")
-        sys.exit(1)
-
-    log_file = sys.argv[1]
-    config_file = "config.json"
-
-    if len(sys.argv) > 2:
-        if sys.argv[1] == "--config":
-            if len(sys.argv) < 3:
-                print("Error: Missing config file path after --config.")
-                sys.exit(1)
-            config_file = sys.argv[2]
-            log_file = sys.argv[3]
-        else:
-            # Check if --config is provided as the second argument
-            if sys.argv[2] == "--config":
-                if len(sys.argv) < 4:
-                    print("Error: Missing config file path after --config.")
-                    sys.exit(1)
-                config_file = sys.argv[3]
-
-    config = load_config(config_file)
-    scan_logs(log_file, config)
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Usage: python3 loghawk.py /path/to/logfile.log")
+        sys.exit(1)
+    
+    config = load_config()
+    scan_logs(sys.argv[1], config)
