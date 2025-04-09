@@ -1,7 +1,8 @@
 # LogHawk
 
 What LogHawk does and why security teams need it:
-LogHawk is a tool designed to help security teams automatically monitor and analyze log files for suspicious activity like failed login attempts or unauthorized access.”
+
+LogHawk is a simple yet powerful tool designed to help security teams monitor system logs for suspicious activity. It leverages regular expressions to identify common security events like failed logins, critical system errors, and potentially malicious behavior — making it a great companion for early threat detection and response automation.
 
 Installation steps:
 Before using LogHawk, make sure you have Python 3 installed. You can install it by running:
@@ -20,4 +21,18 @@ example of what the output should look like:
 
 
 How to automate it with cron:
-To have LogHawk run every 10 minutes, you’ll want to add this to your crontab: */10 * * * * /path/to/loghawk.sh
+1. Make the script executable (if not already):
+
+chmod +x loghawk.py
+
+2. Add it to your crontab:
+Open your crontab editor:
+
+crontab -e
+Add a line like this to run it every 15 minutes:
+
+
+*/15 * * * * /usr/bin/env python3 /path/to/loghawk.py /var/log/syslog >> /home/youruser/loghawk_output.txt 2>&1
+This will scan /var/log/syslog every 15 minutes and log output to loghawk_output.txt.
+
+
